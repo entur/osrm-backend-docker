@@ -23,7 +23,7 @@ aliases:
     command: |
       echo "export VERSION=$CIRCLE_BRANCH-v$CIRCLE_BUILD_NUM-$(echo -n $CIRCLE_SHA1 | tail -c 8)"  >> $BASH_ENV
   - &docker-build
-    name: Docker build and push
+    name: Docker build
     command: |
       docker build .
   - &docker-build-and-push
@@ -64,7 +64,7 @@ workflows:
           filters:
             branches:
               ignore: rutebanken
-  build_test_deploy:
+  build_deploy:
     jobs:
       - deploy-docker:
           context: global
