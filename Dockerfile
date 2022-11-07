@@ -1,4 +1,4 @@
-FROM ubuntu:bionic as base
+FROM ubuntu:jammy as base
 
 RUN apt-get update && apt-get -y upgrade
 
