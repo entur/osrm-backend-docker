@@ -42,7 +42,7 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker:
-          version: 20.10.17
+          version: default
       - run: *GCP-auth-docker
       - run: *docker-build
   deploy-docker:
@@ -50,7 +50,7 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker:
-          version: 20.10.17
+          version: default
       - run: *create-image-version
       - run: *tag-git-version
       - run: *GCP-auth-docker
