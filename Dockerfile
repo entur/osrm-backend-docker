@@ -1,4 +1,4 @@
-FROM ubuntu:bionic as base
+FROM ubuntu:noble as base
 
 RUN apt-get update && apt-get -y upgrade
 
