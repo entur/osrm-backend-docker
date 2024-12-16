@@ -1,0 +1,15 @@
+name: Build and push
+on:
+  push:
+    branches:
+      - rutebanken
+  pull_request:
+    branches:
+      - rutebanken
+jobs:
+  docker-build:
+    if: github.repository_owner == 'entur' && github.event_name == 'push' && github.ref == 'refs/heads/rutebanken'
+    uses: entur/gha-docker/.github/workflows/build.yml@v1
+  docker-push:
+    needs: [docker-build]
+    uses: entur/gha-docker/.github/workflows/push.yml@v1
