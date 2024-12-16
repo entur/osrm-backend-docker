@@ -10,6 +10,10 @@ jobs:
   docker-build:
     if: github.repository_owner == 'entur' && github.event_name == 'push' && github.ref == 'refs/heads/rutebanken'
     uses: entur/gha-docker/.github/workflows/build.yml@v1
+    with:
+      image-name: osrm-api
   docker-push:
     needs: [docker-build]
     uses: entur/gha-docker/.github/workflows/push.yml@v1
+    with:
+      image-name: osrm-api
