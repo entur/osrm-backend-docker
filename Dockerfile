@@ -1,8 +1,7 @@
-FROM osrm/osrm-backend:v5.25.0
-
-COPY profiles/. /opt/
+FROM ghcr.io/project-osrm/osrm-backend:v5.27.1
 
 WORKDIR /deployments
+COPY profiles/. /opt/
 COPY docker-entrypoint.sh .
 RUN chmod +x docker-entrypoint.sh
 RUN addgroup appuser && adduser --disabled-password appuser --ingroup appuser --gecos ""

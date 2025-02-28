@@ -1,5 +1,5 @@
 #!/bin/bash
-DATA_PATH=${DATA_PATH:="osrm-data"}
+DATA_PATH=${DATA_PATH:="/data"}
 set -e
 
 _sig() {
@@ -8,6 +8,15 @@ _sig() {
 
 if [ "$1" = 'osrm' ]; then
   trap _sig SIGKILL SIGTERM SIGHUP SIGINT EXIT
+
+  echo "Content of $DATA_PATH"
+  ls $DATA_PATH
+
+  echo "Content of /opt"
+  ls /opt/
+
+    echo "Content of /opt/lib"
+    ls /opt/lib
 
   if [ ! -f /opt/$2.lua ]; then
     echo "You need to give a valid profile name as argument. Invalid: $2"
@@ -24,10 +33,12 @@ if [ "$1" = 'osrm' ]; then
       exit 1
     fi
     osrm-extract -p profile.lua $3
-    osrm-contract $DATA_PATH/$2.osrm
+    echo "osrm-extract finished"
+    ls $DATA_PATH
+    osrm-contract $DATA_PATH/data.osrm
   fi
 
-  osrm-routed $DATA_PATH/$2.osrm --max-table-size 8000 &
+  osrm-routed $DATA_PATH/data.osrm --max-table-size 8000 --algorithm ch &
   child=$!
   wait "$child"
 else
