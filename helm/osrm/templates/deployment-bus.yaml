@@ -37,6 +37,10 @@ spec:
                         - osrm-water
                 topologyKey: kubernetes.io/hostname
               weight: 100
+      volumes:
+        - name: osm-data
+          emptyDir:
+            sizeLimit: 1.5Gi
       initContainers:
         - name: download-osm-data
           image: curlimages/curl:8.12.1
