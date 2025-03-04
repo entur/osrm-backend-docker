@@ -4,10 +4,16 @@ rollingUpdate:
   maxSurge: 2
   maxUnavailable: 0
 
+init:
+  resources:
+    memLimit: 6000Mi
+    cpuRequest: 6
+    memRequest: 4000Mi
+
 resources:
-  memLimit: 12000Mi
-  cpuRequest: 4
-  memRequest: 8000Mi
+  memLimit: 4000Mi
+  cpuRequest: 200m
+  memRequest: 2000Mi
 
 image:
   identifier: <+artifacts.primary.image>

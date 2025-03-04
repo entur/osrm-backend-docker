@@ -40,11 +40,47 @@ spec:
       volumes:
         - name: osm-data
           emptyDir:
-            sizeLimit: 100Gi
+            sizeLimit: 10Gi
       initContainers:
         - name: download-osm-data
           image: curlimages/curl:8.12.1
-          command: ['sh', '-c', 'curl -o /data/data.osm.pbf https://storage.googleapis.com/{{ .Values.cronJob.gcpBucketName }}']
+          command: ['sh', '-c', 'curl -o /data/norway-latest.osm.pbf https://storage.googleapis.com/{{ .Values.cronJob.gcpBucketName }}/norway-latest.osm.pbf']
+          volumeMounts:
+            - mountPath: /data
+              name: osm-data
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+        - name: osrm-extract
+          image: {{ .Values.image.identifier }}
+          imagePullPolicy: {{ .Values.image.imagePullPolicy }}
+          command: ['osrm-extract', '-p', '/opt/bus.lua', '/data/norway-latest.osm.pbf']
+          resources:
+            limits:
+              memory: {{ .Values.init.resources.memLimit }}
+            requests:
+              cpu: {{ .Values.init.resources.cpuRequest }}
+              memory: {{ .Values.init.resources.memRequest }}
+          volumeMounts:
+            - mountPath: /data
+              name: osm-data
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+        - name: osrm-contract
+          image: {{ .Values.image.identifier }}
+          imagePullPolicy: {{ .Values.image.imagePullPolicy }}
+          command: ['osrm-contract', '/data/norway-latest.osrm']
           volumeMounts:
             - mountPath: /data
               name: osm-data
@@ -60,11 +96,7 @@ spec:
         - name: {{ .Chart.Name }}-bus
           image: {{ .Values.image.identifier }}
           imagePullPolicy: {{ .Values.image.imagePullPolicy }}
-          command:
-            - /deployments/docker-entrypoint.sh
-            - osrm
-            - bus
-            - /data/data.osm.pbf
+          command: ['osrm-routed', '/data/norway-latest.osrm']
           env:
             - name: TZ
               value: Europe/Oslo
