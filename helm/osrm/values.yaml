@@ -8,7 +8,7 @@ resources:
   cpuLimit: 3000m
   memLimit: 4000Mi
   cpuRequest: 200m
-  memRequest: 1000Mi
+  memRequest: 2000Mi
 
 image:
   identifier: <+artifacts.primary.image>
