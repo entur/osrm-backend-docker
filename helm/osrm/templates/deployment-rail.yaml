@@ -39,7 +39,7 @@ spec:
               weight: 100
       initContainers:
         - name: download-osm-data
-          image: busybox:1.28
+          image: curlimages/curl:8.12.1
           command: ['sh', '-c', 'curl -o /data/data.osm.pbf https://storage.googleapis.com/{{ .Values.cronJob.gcpBucketName }}']
           volumeMounts:
             - mountPath: /data
