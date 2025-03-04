@@ -48,6 +48,14 @@ spec:
           volumeMounts:
             - mountPath: /data
               name: osm-data
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
       containers:
         - name: {{ .Chart.Name }}-bus
           image: {{ .Values.image.identifier }}
