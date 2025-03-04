@@ -37,6 +37,13 @@ spec:
                         - osrm-water
                 topologyKey: kubernetes.io/hostname
               weight: 100
+      initContainers:
+        - name: download-osm-data
+          image: curlimages/curl:8.12.1
+          command: ['sh', '-c', 'curl -o /data/data.osm.pbf https://storage.googleapis.com/{{ .Values.cronJob.gcpBucketName }}']
+          volumeMounts:
+            - mountPath: /data
+              name: osm-data
       containers:
         - name: {{ .Chart.Name }}-water
           image: {{ .Values.image.identifier }}
@@ -45,10 +52,13 @@ spec:
             - /deployments/docker-entrypoint.sh
             - osrm
             - ferry
-            - https://storage.googleapis.com/{{ .Values.cronJob.gcpBucketName }}
+            - /data/data.osm.pbf
           env:
             - name: TZ
               value: Europe/Oslo
+          volumeMounts:
+            - mountPath: /data
+              name: osm-data
           resources:
             limits:
               cpu: {{ .Values.resources.cpuLimit }}
