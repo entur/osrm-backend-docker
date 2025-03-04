@@ -44,7 +44,7 @@ spec:
       initContainers:
         - name: download-osm-data
           image: curlimages/curl:8.12.1
-          command: ['sh', '-c', 'curl -o /osm-data/data.osm.pbf https://storage.googleapis.com/{{ .Values.cronJob.gcpBucketName }}']
+          command: ['sh', '-c', 'curl -o /data/data.osm.pbf https://storage.googleapis.com/{{ .Values.cronJob.gcpBucketName }}']
           volumeMounts:
             - mountPath: /osm-data
               name: osm-data
