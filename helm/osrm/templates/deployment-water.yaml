@@ -40,7 +40,7 @@ spec:
       volumes:
         - name: osm-data
           emptyDir:
-            sizeLimit: 1.5Gi
+            sizeLimit: 100Gi
       initContainers:
         - name: download-osm-data
           image: curlimages/curl:8.12.1
