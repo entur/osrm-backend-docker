@@ -110,5 +110,6 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
         runAsGroup: 1000
+      serviceAccountName: application
       terminationGracePeriodSeconds: 31
 
