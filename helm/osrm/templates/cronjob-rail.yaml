@@ -20,7 +20,7 @@ spec:
           initContainers:
             - name: download-osm-data
               image: curlimages/curl:8.12.1
-              command: ['sh', '-c', 'curl -o /data/norway-latest.osm.pbf https://storage.googleapis.com/{{ .Values.cronJob.gcpBucketName }}/norway-latest.osm.pbf']
+              command: ['sh', '-c', 'curl -o /data/norway-latest.osm.pbf {{ .Values.data.osmDataUrl }}']
               volumeMounts:
                 - mountPath: /data
                   name: osm-data
@@ -73,7 +73,7 @@ spec:
               command:
                 - sh
                 - -c
-                - 'gsutil -m rsync -d -r -x "^(?!.*norway-latest.osrm\.).*" /data gs://marduk-dev/osrm/osrm-rail/'
+                - 'gsutil -m rsync -d -r -x "^(?!.*norway-latest.osrm\.).*" /data gs://{{ .Values.data.osrmDataBucket }}/osrm-rail/'
               env:
                 - name: CLOUDSDK_CORE_DISABLE_PROMPTS
                   value: "1"

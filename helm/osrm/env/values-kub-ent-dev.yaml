@@ -3,3 +3,7 @@ cronJob:
   gcpProject: entur-ror-dev
   gcpBucketName: marduk-dev/osm
   slackUrl: ror-dev-slack-url
+
+data:
+  osmDataUrl: https://storage.googleapis.com/marduk-dev/osm/norway-latest.osm.pbf
+  osrmDataBucket: ror-osrm-internal-dev
