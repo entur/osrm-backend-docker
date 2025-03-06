@@ -101,7 +101,7 @@ spec:
                   value: {{ .Values.cronJob.gcpProject }}
               image: eu.gcr.io/entur-system-1287/deployment-rollout-restart:0.1.2
               imagePullPolicy: IfNotPresent
-              name: redeploy-osrm-water
+              name: redeploy-osrm-rail
               resources: {}
               securityContext:
                 allowPrivilegeEscalation: false
