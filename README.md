@@ -1,49 +1,70 @@
-# Dockerfile for osrm-backend [![CircleCI](https://circleci.com/gh/entur/osrm-backend-docker/tree/rutebanken.svg?style=svg)](https://circleci.com/gh/entur/osrm-backend-docker/tree/rutebanken)
-This container run [osrm-backend](https://github.com/Project-OSRM/osrm-backend) project.
-Open Source Routing Machine (OSRM) Docker Image [\[Docker Hub\]](https://hub.docker.com/r/cartography/osrm-backend-docker/)
+# OSRM API
 
-## Installation
+This project uses the [osrm-backend](https://github.com/Project-OSRM/osrm-backend)
+Open Source Routing Machine (OSRM) [Docker Image](https://github.com/project-osrm/osrm-backend/pkgs/container/osrm-backend)
 
-1. Install [Docker](https://www.docker.com/)
+## Profiles
 
-2. Manual deploy (optional).
+The `profiles` folder contains custom profile code that is copied into the docker image. That is
+the only addition to the upstream image. See `profiles/README.md` from more information.
 
-  Pull automated build from Docker Hub:
-  ```
-  $ docker pull cartography/osrm-backend-docker
-  ```
-  or build from GitHub:
-  ```
-  $ docker build -t="cartography/osrm-backend-docker" github.com/cartography/osrm-backend-docker
-  ```
-  or you can clone & build:  
-  ```
-  $ git clone https://github.com/cartography/osrm-backend-docker.git  
-  $ docker build -t="cartography/osrm-backend-docker" osrm-backend-docker/
-  ```
+## Architecture
 
-## Usage
-Run it:  
-```
-docker run -d -p 5000:5000 cartography/osrm-backend-docker:latest osrm profile "http://your/path/to/data.osm.pbf"
-```  
+### Docker build
 
-Explanation:  
-- `-d` - run container in background and print container ID
-- `-p 5000:5000` - publish a container port to host
-- `osrm` - go via entrypoint script, w/o osrm keyword - classic mode
-- `profile` - the profile you want to run
-- `url` - link to OSM data in PBF format
+This project builds a custom docker image with the upstream osrm-backend image as a base
+and copies the custom profiles into it as mentioned above. This custom image is then used
+in both the CronJobs (for building the osrm data) and for the main deployments.
 
-For example:  
-```
-docker run -d -p 5000:5000 --name osrm-api cartography/osrm-backend-docker:latest osrm car "http://download.geofabrik.de/north-america/us/california-latest.osm.pbf"
-```
+### Data pipeline and redeploy
 
-## Start OSRM Frontend (currently not supporting v5.0.0)
+This project uses Kubernetes CronJobs with init containers to build the OSRM data / graph. The
+job ends with a redeployment of the main services.
 
-    docker run -d --link osrm-api:api --name osrm-mos-front --restart=always -p 8080:80 cartography/osrm-frontend-docker
+There are three CronJobs, each corresponding to a main deployment servicing a specific profile: 
 
-You must `--link` osrm-frontend container with osrm-api with `api` tag. Or use `API_PORT_5000_TCP_ADDR` and `API_PORT_5000_TCP_PORT` variables to set host and port of the api.
+- bus
+- rail
+- water (ferry)
 
-You can test it by visiting [http://container-ip:8080](http://container-ip:8080)
+Each CronJob runs the following init containers in sequence:
+
+1. Download OSM data (protobuf file) from a GCP bucket
+2. Run osrm-extract (with our custom docker image) with a specific profile and the OSM data as input
+3. Run osrm-contract (with our custom docker image) on the output of the previous step
+4. Copy the output (osrm data) to a GCP bucket
+
+The main contanier of the CronJob then finishes the pipeline by triggering a redeploy
+of the main service.
+
+### Main routing service (deployment)
+
+The main deployment has its own init container which downloads the osrm data uploaded by
+step 4 in the CronJob pipeline as described above.
+
+The main container then simply runs `osrm-routed`  (with our custom docker image) 
+with the downloaded data as input.
+
+## Running locally
+
+You can modify profile code locally and test it as follows:
+
+1. After you changed some profile code (say `profiles/bus.lua`), run 
+   `docker build -t osrm .`
+2. Make sure you have an OSM protobuf file for the area you are interested in. Let's assume
+    you have a `data/` folder that contains this file. Assume it is called `norway.osm.pbf`.
+3. Run `osrm-extract` like this:
+   `docker run -t -v "${PWD}/data:/data" osrm osrm-extract -p /opt/bus.lua /data/norway.osm.pbf`
+4. Run `osrm-contract` like this:
+   `docker run -t -v "${PWD}/data:/data" osrm osrm-contract  /data/norway.osrm`
+5. Finally you can run the routing service itself, using this data:
+   `docker run -t -i -p 5001:5000 -v "${PWD}/data:/data" osrm osrm-routed  /data/norway.osrm`
+
+The OSRM routing service is now available on "http://localhost:5001".
+
+You can use `osrm-frontend` to test it:
+
+    docker run -p 9966:9966 -e OSRM_BACKEND=http://localhost:5001 osrm/osrm-frontend
+
+Please note that in this example I have used port 5001 on the host machine. This is because
+on recent versions of macOS, port 5000 is reserved the AirTunes.
