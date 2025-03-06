@@ -3,3 +3,7 @@ cronJob:
   gcpProject: entur-ror-test
   gcpBucketName: marduk-test/osm/norway-latest.osm.pbf
   slackUrl: ror-test-slack-url
+
+data:
+  osmDataUrl: https://storage.googleapis.com/marduk-test/osm/norway-latest.osm.pbf
+  osrmDataBucket: ror-osrm-internal-tst
