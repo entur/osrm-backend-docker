@@ -38,7 +38,7 @@ spec:
                 topologyKey: kubernetes.io/hostname
               weight: 100
       volumes:
-        - name: osm-data
+        - name: osrm-data
           emptyDir:
             sizeLimit: 100Gi
       initContainers:
@@ -74,7 +74,7 @@ spec:
               memory: {{ .Values.init.resources.memRequest }}
           volumeMounts:
             - mountPath: /data
-              name: osm-data
+              name: osrm-data
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
