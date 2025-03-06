@@ -42,12 +42,18 @@ spec:
           emptyDir:
             sizeLimit: 10Gi
       initContainers:
-        - name: download-osm-data
-          image: curlimages/curl:8.12.1
-          command: ['sh', '-c', 'curl -o /data/norway-latest.osm.pbf https://storage.googleapis.com/{{ .Values.cronJob.gcpBucketName }}/norway-latest.osm.pbf']
+        - name: download-osrm-data
+          image: google/cloud-sdk:408.0.1
+          command:
+            - sh
+            - -c
+            - 'gsutil -m rsync -r gs://{{ .Values.data.osrmDataBucket }}/osrm-bus/ /data'
+          env:
+            - name: CLOUDSDK_CORE_DISABLE_PROMPTS
+              value: "1"
           volumeMounts:
             - mountPath: /data
-              name: osm-data
+              name: osrm-data
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

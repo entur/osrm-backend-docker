@@ -47,7 +47,7 @@ spec:
           command:
             - sh
             - -c
-            - 'gsutil -m rsync -r gs://marduk-dev/osrm/osrm-rail/ /data'
+            - 'gsutil -m rsync -r gs://{{ .Values.data.osrmDataBucket }}/osrm-rail/ /data'
           env:
             - name: CLOUDSDK_CORE_DISABLE_PROMPTS
               value: "1"
