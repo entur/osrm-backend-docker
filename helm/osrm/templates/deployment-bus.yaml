@@ -62,42 +62,6 @@ spec:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-        - name: osrm-extract
-          image: {{ .Values.image.identifier }}
-          imagePullPolicy: {{ .Values.image.imagePullPolicy }}
-          command: ['osrm-extract', '-p', '/opt/bus.lua', '/data/norway-latest.osm.pbf']
-          resources:
-            limits:
-              memory: {{ .Values.init.resources.memLimit }}
-            requests:
-              cpu: {{ .Values.init.resources.cpuRequest }}
-              memory: {{ .Values.init.resources.memRequest }}
-          volumeMounts:
-            - mountPath: /data
-              name: osrm-data
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-            runAsNonRoot: true
-            seccompProfile:
-              type: RuntimeDefault
-        - name: osrm-contract
-          image: {{ .Values.image.identifier }}
-          imagePullPolicy: {{ .Values.image.imagePullPolicy }}
-          command: ['osrm-contract', '/data/norway-latest.osrm']
-          volumeMounts:
-            - mountPath: /data
-              name: osm-data
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-            runAsNonRoot: true
-            seccompProfile:
-              type: RuntimeDefault
       containers:
         - name: {{ .Chart.Name }}-bus
           image: {{ .Values.image.identifier }}
@@ -108,7 +72,7 @@ spec:
               value: Europe/Oslo
           volumeMounts:
             - mountPath: /data
-              name: osm-data
+              name: osrm-data
           resources:
             limits:
               memory: {{ .Values.resources.memLimit }}
