@@ -1,5 +1,11 @@
 FROM ghcr.io/project-osrm/osrm-backend:v5.27.1
 
+RUN apt-get -y update \
+    && apt-get -y upgrade \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean \
+    && rm -rf /var/cache/apt/archives/
+
 COPY profiles/. /opt/
 COPY profiles/lib/. /opt/lib/
 
