@@ -41,6 +41,12 @@ jobs:
         restore-keys: |
           osrm-zeeland-
 
+    - name: Download OSM data
+      run: |
+        echo "Downloading Zeeland OSM data..."
+        wget -O zeeland-latest.osm.pbf "https://download.geofabrik.de/europe/netherlands/zeeland-latest.osm.pbf"
+        ls -la zeeland-latest.osm.pbf
+
     - name: Build Docker image
       run: docker build -t osrm-test .
 
