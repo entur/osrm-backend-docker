@@ -47,18 +47,42 @@ jobs:
     - name: Start test services
       run: |
         docker compose -f docker-compose.test.yml up -d
-        echo "Waiting for services to initialize..."
-        sleep 30
 
-    - name: Wait for services to be healthy
+    - name: Wait for data preparation to complete
       run: |
-        timeout 300 bash -c '
-          until docker compose -f docker-compose.test.yml ps | grep -E "(healthy|Up)" | wc -l | grep -q "3"; do
-            echo "Waiting for all services to be healthy..."
-            docker compose -f docker-compose.test.yml ps
-            sleep 10
+        echo "Waiting for data preparation to complete..."
+        timeout 600 bash -c '
+          while ! docker compose -f docker-compose.test.yml logs osrm-prepare | grep -q "Data preparation complete!"; do
+            echo -n "."
+            sleep 5
           done
         '
+        echo
+        echo "Data preparation completed!"
+
+    - name: Restart routing services
+      run: |
+        echo "Restarting routing services to pick up prepared data..."
+        docker compose -f docker-compose.test.yml restart osrm-bus osrm-rail osrm-ferry
+        sleep 10
+
+    - name: Wait for routing services to be ready
+      run: |
+        echo "Waiting for routing services to be ready..."
+        services=("bus:5001" "rail:5002" "ferry:5003")
+        
+        for service_port in "${services[@]}"; do
+          IFS=':' read -r service port <<< "$service_port"
+          echo "Checking $service service on port $port..."
+          
+          timeout 120 bash -c "
+            until curl -sf \"http://localhost:$port/route/v1/driving/4.0,51.5;4.1,51.6?overview=false\" >/dev/null 2>&1; do
+              echo -n '.'
+              sleep 2
+            done
+          "
+          echo " ✓ $service service is ready"
+        done
 
     - name: Show service logs (debug)
       if: always()
