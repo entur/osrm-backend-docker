@@ -27,7 +27,7 @@ fi
 
 # Start services
 log "Starting test services..."
-docker-compose -f docker-compose.test.yml up -d
+docker compose -f docker-compose.test.yml up -d
 
 # Wait for services to be ready
 log "Waiting for services to be ready..."
@@ -45,7 +45,7 @@ for service_port in "${services[@]}"; do
         
         if [ $i -eq 30 ]; then
             error "$service service failed to start"
-            docker-compose -f docker-compose.test.yml logs
+            docker compose -f docker-compose.test.yml logs
             exit 1
         fi
         
@@ -106,7 +106,7 @@ done
 
 # Cleanup
 log "Cleaning up..."
-docker-compose -f docker-compose.test.yml down -v
+docker compose -f docker-compose.test.yml down -v
 
 # Summary
 echo
