@@ -1,0 +1,79 @@
+services:
+  # Data preparation service
+  osrm-prepare:
+    image: ghcr.io/project-osrm/osrm-backend:v5.27.1
+    volumes:
+      - osrm-data:/data
+      - ./profiles:/profiles
+      - ./test-data:/input
+    working_dir: /opt
+    command: >
+      sh -c "
+        echo 'Preparing bus routing data...' &&
+        osrm-extract -p /profiles/bus.lua /input/zeeland-latest.osm.pbf &&
+        mv /input/zeeland-latest.osrm* /data/ &&
+        cd /data && for f in zeeland-latest.osrm*; do mv \"$$f\" \"$$(echo $$f | sed 's/zeeland-latest/zeeland-bus/')\"; done &&
+        osrm-contract /data/zeeland-bus.osrm &&
+        echo 'Preparing rail routing data...' &&
+        osrm-extract -p /profiles/rail.lua /input/zeeland-latest.osm.pbf &&
+        mv /input/zeeland-latest.osrm* /data/ &&
+        cd /data && for f in zeeland-latest.osrm*; do mv \"$$f\" \"$$(echo $$f | sed 's/zeeland-latest/zeeland-rail/')\"; done &&
+        osrm-contract /data/zeeland-rail.osrm &&
+        echo 'Preparing ferry routing data...' &&
+        osrm-extract -p /profiles/ferry.lua /input/zeeland-latest.osm.pbf &&
+        mv /input/zeeland-latest.osrm* /data/ &&
+        cd /data && for f in zeeland-latest.osrm*; do mv \"$$f\" \"$$(echo $$f | sed 's/zeeland-latest/zeeland-ferry/')\"; done &&
+        osrm-contract /data/zeeland-ferry.osrm &&
+        echo 'Data preparation complete!'
+      "
+
+  osrm-bus:
+    build: .
+    ports:
+      - "5001:5000"
+    volumes:
+      - osrm-data:/data
+    command: osrm-routed /data/zeeland-bus.osrm
+    depends_on:
+      - osrm-prepare
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/route/v1/driving/3.7,51.5;3.71,51.51?overview=false"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  osrm-rail:
+    build: .
+    ports:
+      - "5002:5000"
+    volumes:
+      - osrm-data:/data
+    command: osrm-routed /data/zeeland-rail.osrm
+    depends_on:
+      - osrm-prepare
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/route/v1/driving/3.7,51.5;3.71,51.51?overview=false"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  osrm-ferry:
+    build: .
+    ports:
+      - "5003:5000"
+    volumes:
+      - osrm-data:/data
+    command: osrm-routed /data/zeeland-ferry.osrm
+    depends_on:
+      - osrm-prepare
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/route/v1/driving/3.7,51.5;3.71,51.51?overview=false"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  osrm-data:
