@@ -22,12 +22,25 @@ mkdir -p test/expected test/results test-data
 # Download test data if needed
 if [ ! -f "test-data/zeeland-latest.osm.pbf" ]; then
     log "Downloading test data..."
-    curl -L -o "test-data/zeeland-latest.osm.pbf" "https://download.geofabrik.de/europe/netherlands/zeeland-latest.osm.pbf"
+    curl -L -o "test-data/zeeland-latest.osm.pbf" "https://download.geofabrik.de/europe/netherlands/zeeland-240101.osm.pbf"
 fi
 
 # Start services
 log "Starting test services..."
 docker compose -f docker-compose.test.yml up -d
+
+# Wait for data preparation to complete
+log "Waiting for data preparation to complete..."
+while ! docker compose -f docker-compose.test.yml logs osrm-prepare 2>/dev/null | grep -q "Data preparation complete!"; do
+    echo -n "."
+    sleep 5
+done
+echo
+
+# Restart routing services to pick up prepared data
+log "Restarting routing services..."
+docker compose -f docker-compose.test.yml restart osrm-bus osrm-rail osrm-ferry
+sleep 5
 
 # Wait for services to be ready
 log "Waiting for services to be ready..."

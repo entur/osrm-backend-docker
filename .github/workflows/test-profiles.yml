@@ -45,7 +45,7 @@ jobs:
       run: |
         echo "Downloading Zeeland OSM data..."
         mkdir -p test-data
-        wget -O test-data/zeeland-latest.osm.pbf "https://download.geofabrik.de/europe/netherlands/zeeland-latest.osm.pbf"
+        wget -O test-data/zeeland-latest.osm.pbf "https://download.geofabrik.de/europe/netherlands/zeeland-240101.osm.pbf"
         ls -la test-data/zeeland-latest.osm.pbf
 
     - name: Build Docker image
