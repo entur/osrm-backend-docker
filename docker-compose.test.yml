@@ -1,26 +1,25 @@
 services:
   # Data preparation service
   osrm-prepare:
-    image: ghcr.io/project-osrm/osrm-backend:v5.27.1
+    build: .
     volumes:
       - osrm-data:/data
-      - ./profiles:/profiles
       - ./test-data:/input
     working_dir: /opt
     command: >
       sh -c "
         echo 'Preparing bus routing data...' &&
-        osrm-extract -p /profiles/bus.lua /input/zeeland-latest.osm.pbf &&
+        osrm-extract -p /opt/bus.lua /input/zeeland-latest.osm.pbf &&
         mv /input/zeeland-latest.osrm* /data/ &&
         cd /data && for f in zeeland-latest.osrm*; do mv \"$$f\" \"$$(echo $$f | sed 's/zeeland-latest/zeeland-bus/')\"; done &&
         osrm-contract /data/zeeland-bus.osrm &&
         echo 'Preparing rail routing data...' &&
-        osrm-extract -p /profiles/rail.lua /input/zeeland-latest.osm.pbf &&
+        osrm-extract -p /opt/rail.lua /input/zeeland-latest.osm.pbf &&
         mv /input/zeeland-latest.osrm* /data/ &&
         cd /data && for f in zeeland-latest.osrm*; do mv \"$$f\" \"$$(echo $$f | sed 's/zeeland-latest/zeeland-rail/')\"; done &&
         osrm-contract /data/zeeland-rail.osrm &&
         echo 'Preparing ferry routing data...' &&
-        osrm-extract -p /profiles/ferry.lua /input/zeeland-latest.osm.pbf &&
+        osrm-extract -p /opt/ferry.lua /input/zeeland-latest.osm.pbf &&
         mv /input/zeeland-latest.osrm* /data/ &&
         cd /data && for f in zeeland-latest.osrm*; do mv \"$$f\" \"$$(echo $$f | sed 's/zeeland-latest/zeeland-ferry/')\"; done &&
         osrm-contract /data/zeeland-ferry.osrm &&
