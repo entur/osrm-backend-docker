@@ -94,12 +94,24 @@ jobs:
           IFS=':' read -r service port <<< "$service_port"
           echo "Checking $service service on port $port..."
           
+          # Check service logs first
+          echo "Current $service service logs:"
+          docker compose -f docker-compose.test.yml logs osrm-$service
+          echo
+          
           timeout 120 bash -c "
             until curl -sf \"http://localhost:$port/route/v1/driving/4.0,51.5;4.1,51.6?overview=false\" >/dev/null 2>&1; do
               echo -n '.'
               sleep 2
             done
-          "
+          " || {
+            echo " ✗ $service service failed to start within timeout"
+            echo "Final $service service logs:"
+            docker compose -f docker-compose.test.yml logs osrm-$service
+            echo "Container status:"
+            docker compose -f docker-compose.test.yml ps
+            exit 1
+          }
           echo " ✓ $service service is ready"
         done
 
