@@ -30,22 +30,25 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Create test directories
-      run: mkdir -p test/expected test/results
+      run: mkdir -p test/expected test/results test-data
 
-    - name: Cache OSRM data
+    - name: Cache OSM data file
       uses: actions/cache@v4
       with:
         path: |
-          /tmp/osrm-data
-        key: osrm-zeeland-${{ hashFiles('profiles/**/*.lua') }}
+          test-data/zeeland-latest.osm.pbf
+        key: osm-zeeland-240101-${{ hashFiles('profiles/**/*.lua') }}
         restore-keys: |
-          osrm-zeeland-
+          osm-zeeland-240101-
 
     - name: Download OSM data
       run: |
-        echo "Downloading Zeeland OSM data..."
-        mkdir -p test-data
-        wget -O test-data/zeeland-latest.osm.pbf "https://download.geofabrik.de/europe/netherlands/zeeland-240101.osm.pbf"
+        if [ ! -f "test-data/zeeland-latest.osm.pbf" ]; then
+          echo "Downloading Zeeland OSM data..."
+          wget -O test-data/zeeland-latest.osm.pbf "https://download.geofabrik.de/europe/netherlands/zeeland-240101.osm.pbf"
+        else
+          echo "Using cached OSM data..."
+        fi
         ls -la test-data/zeeland-latest.osm.pbf
 
     - name: Build Docker image
