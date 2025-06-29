@@ -1,10 +1,8 @@
-FROM ghcr.io/project-osrm/osrm-backend:v5.27.1
+FROM ghcr.io/project-osrm/osrm-backend:v6.0.0
 
-RUN apt-get -y update \
-    && apt-get -y upgrade \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean \
-    && rm -rf /var/cache/apt/archives/
+RUN apk update \
+    && apk upgrade \
+    && rm -rf /var/cache/apk/*
 
 COPY profiles/. /opt/
 COPY profiles/lib/. /opt/lib/
