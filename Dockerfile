@@ -1,4 +1,4 @@
-FROM ghcr.io/project-osrm/osrm-backend:v5.27.1
+FROM ghcr.io/project-osrm/osrm-backend:v6.0.0
 
 RUN apt-get -y update \
     && apt-get -y upgrade \
