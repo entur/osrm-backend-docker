@@ -1,4 +1,4 @@
-FROM ghcr.io/project-osrm/osrm-backend:v6.0.0
+FROM ghcr.io/project-osrm/osrm-backend:v6.0.0-alpine
 
 RUN apt-get -y update \
     && apt-get -y upgrade \
