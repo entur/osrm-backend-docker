@@ -1,3 +1,5 @@
 *.iml
 /.idea
-
+data/
+test-data/
+test/results/

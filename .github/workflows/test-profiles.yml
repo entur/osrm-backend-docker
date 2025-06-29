@@ -1,0 +1,180 @@
+name: Test OSRM Profiles
+
+on:
+  push:
+    branches: [ rutebanken ]
+    paths:
+      - 'profiles/**'
+      - 'Dockerfile'
+      - 'docker-compose.test.yml'
+      - 'run-test.sh'
+  pull_request:
+    branches: [ rutebanken ]
+    paths:
+      - 'profiles/**'
+      - 'Dockerfile'
+      - 'docker-compose.test.yml'
+      - 'run-test.sh'
+  workflow_dispatch:
+
+jobs:
+  test-profiles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Create test directories
+      run: mkdir -p test/expected test/results test-data
+
+    - name: Cache OSM data file
+      uses: actions/cache@v4
+      with:
+        path: |
+          test-data/zeeland-latest.osm.pbf
+        key: osm-zeeland-240101-${{ hashFiles('profiles/**/*.lua') }}
+        restore-keys: |
+          osm-zeeland-240101-
+
+    - name: Download OSM data
+      run: |
+        if [ ! -f "test-data/zeeland-latest.osm.pbf" ]; then
+          echo "Downloading Zeeland OSM data..."
+          wget -O test-data/zeeland-latest.osm.pbf "https://download.geofabrik.de/europe/netherlands/zeeland-240101.osm.pbf"
+        else
+          echo "Using cached OSM data..."
+        fi
+        ls -la test-data/zeeland-latest.osm.pbf
+
+    - name: Build Docker image
+      run: docker build -t osrm-test .
+
+    - name: Start test services
+      run: |
+        docker compose -f docker-compose.test.yml up -d
+
+    - name: Wait for data preparation to complete
+      run: |
+        echo "Checking osrm-prepare container status..."
+        docker compose -f docker-compose.test.yml ps
+        echo
+        echo "Current osrm-prepare logs:"
+        docker compose -f docker-compose.test.yml logs osrm-prepare
+        echo
+        echo "Waiting for data preparation to complete..."
+        timeout 600 bash -c '
+          while ! docker compose -f docker-compose.test.yml logs osrm-prepare 2>/dev/null | grep -q "Data preparation complete!"; do
+            # Check if container has exited
+            if ! docker compose -f docker-compose.test.yml ps | grep -q "osrm-prepare"; then
+              echo "osrm-prepare container has exited, checking final logs..."
+              docker compose -f docker-compose.test.yml logs osrm-prepare
+              break
+            fi
+            echo -n "."
+            sleep 10
+          done
+        '
+        echo
+        echo "Data preparation completed!"
+
+    - name: Restart routing services
+      run: |
+        echo "Restarting routing services to pick up prepared data..."
+        docker compose -f docker-compose.test.yml restart osrm-bus osrm-rail osrm-ferry
+        sleep 10
+
+    - name: Wait for routing services to be ready
+      run: |
+        echo "Waiting for routing services to be ready..."
+        
+        # Test bus service
+        echo "Checking bus service on port 5001..."
+        timeout 120 bash -c "
+          until curl -sf \"http://localhost:5001/route/v1/driving/4.0,51.5;4.1,51.6?overview=false\" >/dev/null 2>&1; do
+            echo -n '.'
+            sleep 2
+          done
+        "
+        echo " ✓ bus service is ready"
+        
+        # Test rail service
+        echo "Checking rail service on port 5002..."
+        timeout 120 bash -c "
+          until curl -sf \"http://localhost:5002/route/v1/driving/4.0,51.5;4.1,51.6?overview=false\" >/dev/null 2>&1; do
+            echo -n '.'
+            sleep 2
+          done
+        "
+        echo " ✓ rail service is ready"
+        
+        # Test ferry service with working ferry coordinates
+        echo "Checking ferry service on port 5003..."
+        timeout 120 bash -c "
+          until curl -sf \"http://localhost:5003/route/v1/driving/4.0295,51.4481;4.0577,51.3644?overview=false\" >/dev/null 2>&1; do
+            echo -n '.'
+            sleep 2
+          done
+        "
+        echo " ✓ ferry service is ready"
+
+    - name: Show service logs (debug)
+      if: always()
+      run: |
+        echo "=== osrm-prepare logs ==="
+        docker compose -f docker-compose.test.yml logs osrm-prepare
+        echo "=== osrm-bus logs ==="
+        docker compose -f docker-compose.test.yml logs osrm-bus
+        echo "=== osrm-rail logs ==="
+        docker compose -f docker-compose.test.yml logs osrm-rail
+        echo "=== osrm-ferry logs ==="
+        docker compose -f docker-compose.test.yml logs osrm-ferry
+
+    - name: Download baseline responses (if exist)
+      run: |
+        # Try to download baseline from previous successful run
+        # This step will fail on first run, which is expected
+        gh run download --name test-baselines --dir test/expected || true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Run profile tests
+      run: |
+        chmod +x run-test.sh
+        ./run-test.sh
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: test/results/
+        retention-days: 7
+
+    - name: Upload baseline responses
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-baselines
+        path: test/expected/
+        retention-days: 30
+
+    - name: Stop services
+      if: always()
+      run: docker compose -f docker-compose.test.yml down -v
+
+    - name: Check for profile regressions
+      if: failure()
+      run: |
+        echo "❌ Profile tests failed!"
+        echo "This indicates that routing responses have changed compared to the baseline."
+        echo "Review the test results to determine if this is expected (profile improvement) or a regression."
+        echo ""
+        echo "To update baselines after confirming changes are expected:"
+        echo "1. Run locally: ./update-baselines.sh"
+        echo "2. Commit the updated baseline files"
+        exit 1
