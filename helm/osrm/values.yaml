@@ -27,3 +27,6 @@ service:
 secrets:
   slack:
     - SLACK_URL
+
+data:
+  osrmVersion: v6
