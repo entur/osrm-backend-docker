@@ -47,7 +47,7 @@ spec:
           command:
             - sh
             - -c
-            - 'gsutil -m rsync -r gs://{{ .Values.data.osrmDataBucket }}/{{ .Values.data.osrmVersion }}/osrm-water/ /data'
+            - 'gsutil -q -m rsync -r gs://{{ .Values.data.osrmDataBucket }}/{{ .Values.data.osrmVersion }}/osrm-water/ /data'
           env:
             - name: CLOUDSDK_CORE_DISABLE_PROMPTS
               value: "1"
