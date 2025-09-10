@@ -6,9 +6,9 @@ rollingUpdate:
 
 init:
   resources:
-    memLimit: 8000Mi
+    memLimit: 10000Mi
     cpuRequest: 6
-    memRequest: 6000Mi
+    memRequest: 8000Mi
 
 resources:
   memLimit: 4000Mi

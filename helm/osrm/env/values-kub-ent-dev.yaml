@@ -3,5 +3,5 @@ cronJob:
   gcpProject: ent-osrm-dev
 
 data:
-  osmDataUrl: https://storage.googleapis.com/ror-osmdata-prd/osm-data/norway-latest.osm.pbf
+  osmDataUrl: https://storage.googleapis.com/ror-osmdata-prd/osm-data/merged-latest.osm.pbf
   osrmDataBucket: ror-osrm-internal-dev
