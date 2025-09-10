@@ -69,11 +69,11 @@ spec:
                 seccompProfile:
                   type: RuntimeDefault
             - name: upload-osrm-data
-              image: google/cloud-sdk:408.0.1
+              image: google/cloud-sdk:537.0.0
               command:
                 - sh
                 - -c
-                - 'gsutil -q -m rsync -d -r -x "^(?!.*norway-latest.osrm\.).*" /data gs://{{ .Values.data.osrmDataBucket }}/{{ .Values.data.osrmVersion }}/osrm-water/'
+                - 'gsutil -o GSUtil:parallel_composite_upload_threshold=150M -q -m rsync -d -r -x "^(?!.*norway-latest.osrm\.).*" /data gs://{{ .Values.data.osrmDataBucket }}/{{ .Values.data.osrmVersion }}/osrm-water/'
               env:
                 - name: CLOUDSDK_CORE_DISABLE_PROMPTS
                   value: "1"

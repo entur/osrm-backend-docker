@@ -43,7 +43,7 @@ spec:
             sizeLimit: 10Gi
       initContainers:
         - name: download-osrm-data
-          image: google/cloud-sdk:408.0.1
+          image: google/cloud-sdk:537.0.0
           command:
             - sh
             - -c
