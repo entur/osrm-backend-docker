@@ -21,22 +21,22 @@ spec:
                 - -c
                 - |
                   set -e
-                  
+
                   # Download current MD5 from OSM source
                   echo "Downloading MD5 from OSM source..."
                   curl -sf "{{ .Values.data.osmDataUrl }}.md5" -o /tmp/current.md5
-                  
+
                   # Extract just the MD5 hash (in case the file contains filename too)
                   CURRENT_MD5=$(cat /tmp/current.md5 | awk '{print $1}')
                   echo "Current OSM MD5: $CURRENT_MD5"
-                  
+
                   # Check if we have a stored MD5 in our bucket
                   echo "Checking for stored MD5 in our bucket..."
                   if gsutil -q stat "gs://{{ .Values.data.osrmDataBucket }}/osm-latest.md5" 2>/dev/null; then
                     gsutil -q cp "gs://{{ .Values.data.osrmDataBucket }}/osm-latest.md5" /tmp/stored.md5
                     STORED_MD5=$(cat /tmp/stored.md5 | awk '{print $1}')
                     echo "Stored MD5: $STORED_MD5"
-                    
+
                     if [ "$CURRENT_MD5" = "$STORED_MD5" ]; then
                       echo "MD5 matches - no update needed"
                       exit 0
@@ -46,23 +46,23 @@ spec:
                   else
                     echo "No stored MD5 found - first run, triggering redeploy"
                   fi
-                  
+
                   # Store the new MD5
                   echo "$CURRENT_MD5" > /tmp/new.md5
                   gsutil -q cp /tmp/new.md5 "gs://{{ .Values.data.osrmDataBucket }}/osm-latest.md5"
                   echo "Stored new MD5 in bucket"
-                  
+
                   # Trigger the redeploy cronjobs
                   echo "Triggering redeploy cronjobs..."
-                  
+
                   # Create jobs from suspended cronjobs
-                  for SERVICE in bus rail water; do
+                  for SERVICE in bus rail water car; do
                     echo "Creating job for osrm-$SERVICE..."
                     kubectl create job --from=cronjob/osrm-$SERVICE-redeploy-cronjob osrm-$SERVICE-manual-$(date +%s) -n osrm || {
                       echo "Failed to create job for osrm-$SERVICE"
                     }
                   done
-                  
+
                   echo "All redeploy jobs triggered successfully"
               env:
                 - name: CLOUDSDK_CORE_DISABLE_PROMPTS
