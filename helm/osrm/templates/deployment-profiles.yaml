@@ -1,17 +1,19 @@
+{{- range $profile := .Values.profiles }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "app.name" . }}-water
+  name: {{ template "app.name" . }}-{{ $profile }}
   namespace: osrm
   labels:
     {{- include "common.labels" . | indent 4 }}
-    app: osrm-water
+    app: osrm-{{ $profile }}
 spec:
   progressDeadlineSeconds: 5400
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
-      app: {{ template "app.name" . }}-water
+      app: {{ template "app.name" . }}-{{ $profile }}
   strategy:
     rollingUpdate:
       maxSurge: {{ .Values.rollingUpdate.maxSurge }}
@@ -21,19 +23,19 @@ spec:
     metadata:
       labels:
         {{- include "common.labels" . | indent 8 }}
-        app: osrm-water
+        app: osrm-{{ $profile }}
     spec:
       volumes:
         - name: osrm-data
           emptyDir:
-            sizeLimit: 100Gi
+            sizeLimit: 10Gi
       initContainers:
         - name: download-osrm-data
           image: google/cloud-sdk:537.0.0
           command:
             - sh
             - -c
-            - 'gsutil -q -m rsync -r gs://{{ .Values.data.osrmDataBucket }}/{{ .Values.data.osrmVersion }}/osrm-water/ /data'
+            - 'gsutil -q -m rsync -r gs://{{ .Values.data.osrmDataBucket }}/{{ .Values.data.osrmVersion }}/osrm-{{ $profile }}/ /data'
           env:
             - name: CLOUDSDK_CORE_DISABLE_PROMPTS
               value: "1"
@@ -49,7 +51,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
       containers:
-        - name: {{ .Chart.Name }}-water
+        - name: {{ .Chart.Name }}-{{ $profile }}
           image: {{ .Values.image.identifier }}
           imagePullPolicy: {{ .Values.image.imagePullPolicy }}
           command: ['osrm-routed', '/data/norway-latest.osrm']
@@ -98,4 +100,4 @@ spec:
         runAsGroup: 1000
       serviceAccountName: application
       terminationGracePeriodSeconds: 31
-
+{{- end}}

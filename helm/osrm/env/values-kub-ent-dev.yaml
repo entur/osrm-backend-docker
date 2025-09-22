@@ -5,3 +5,9 @@ cronJob:
 data:
   osmDataUrl: https://storage.googleapis.com/ror-osmdata-prd/osm-data/merged-latest.osm.pbf
   osrmDataBucket: ror-osrm-internal-dev
+
+profiles:
+  - bus
+  - rail
+  - water
+  - car

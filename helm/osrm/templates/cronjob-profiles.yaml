@@ -1,7 +1,9 @@
+{{- range $profile := .Values.profiles }}
+---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ template "app.name" . }}-car-redeploy-cronjob
+  name: {{ template "app.name" . }}-{{ $profile }}-redeploy-cronjob
   namespace: osrm
   labels:
     {{- include "common.labels" . | indent 4 }}
@@ -35,7 +37,7 @@ spec:
             - name: osrm-extract
               image: {{ .Values.image.identifier }}
               imagePullPolicy: {{ .Values.image.imagePullPolicy }}
-              command: ['osrm-extract', '-p', '/opt/car.lua', '/data/norway-latest.osm.pbf']
+              command: ['osrm-extract', '-p', '/opt/{{ $profile }}.lua', '/data/norway-latest.osm.pbf']
               resources:
                 limits:
                   memory: {{ .Values.init.resources.memLimit }}
@@ -73,7 +75,7 @@ spec:
               command:
                 - sh
                 - -c
-                - 'gsutil -o GSUtil:parallel_composite_upload_threshold=150M -q -m rsync -d -r -x "^(?!.*norway-latest.osrm\.).*" /data gs://{{ .Values.data.osrmDataBucket }}/{{ .Values.data.osrmVersion }}/osrm-car/'
+                - 'gsutil -o GSUtil:parallel_composite_upload_threshold=150M -q -m rsync -d -r -x "^(?!.*norway-latest.osrm\.).*" /data gs://{{ .Values.data.osrmDataBucket }}/{{ .Values.data.osrmVersion }}/osrm-{{ $profile }}/'
               env:
                 - name: CLOUDSDK_CORE_DISABLE_PROMPTS
                   value: "1"
@@ -96,12 +98,12 @@ spec:
                     name: slack
               env:
                 - name: DEPLOYMENT
-                  value: osrm-car
+                  value: osrm-{{ $profile }}
                 - name: CLOUDSDK_CORE_PROJECT
                   value: {{ .Values.cronJob.gcpProject }}
               image: eu.gcr.io/entur-system-1287/deployment-rollout-restart:0.1.2
               imagePullPolicy: IfNotPresent
-              name: redeploy-osrm-car
+              name: redeploy-osrm-{{ $profile }}
               resources: {}
               securityContext:
                 allowPrivilegeEscalation: false
@@ -125,3 +127,4 @@ spec:
   schedule: 0 2 * * *
   successfulJobsHistoryLimit: 3
   suspend: true
+{{- end}}
