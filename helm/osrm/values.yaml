@@ -30,3 +30,9 @@ secrets:
 
 data:
   osrmVersion: v6
+
+profiles:
+  - name: bus
+  - name: rail
+  - name: ferry
+    serviceName: water

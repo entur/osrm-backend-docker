@@ -1,39 +1,41 @@
+{{- range .Values.profiles }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "app.name" . }}-water
+  name: {{ template "app.name" $ }}-{{ .name }}
   namespace: osrm
   labels:
-    {{- include "common.labels" . | indent 4 }}
-    app: osrm-water
+    {{- include "common.labels" $ | indent 4 }}
+    app: osrm-{{ .name }}
 spec:
   progressDeadlineSeconds: 5400
-  replicas: {{ .Values.replicas }}
+  replicas: {{ $.Values.replicas }}
   selector:
     matchLabels:
-      app: {{ template "app.name" . }}-water
+      app: {{ template "app.name" $ }}-{{ .name }}
   strategy:
     rollingUpdate:
-      maxSurge: {{ .Values.rollingUpdate.maxSurge }}
-      maxUnavailable: {{ .Values.rollingUpdate.maxUnavailable }}
+      maxSurge: {{ $.Values.rollingUpdate.maxSurge }}
+      maxUnavailable: {{ $.Values.rollingUpdate.maxUnavailable }}
     type: RollingUpdate
   template:
     metadata:
       labels:
-        {{- include "common.labels" . | indent 8 }}
-        app: osrm-water
+        {{- include "common.labels" $ | indent 8 }}
+        app: osrm-{{ .name }}
     spec:
       volumes:
         - name: osrm-data
           emptyDir:
-            sizeLimit: 100Gi
+            sizeLimit: 10Gi
       initContainers:
         - name: download-osrm-data
           image: google/cloud-sdk:537.0.0
           command:
             - sh
             - -c
-            - 'gsutil -q -m rsync -r gs://{{ .Values.data.osrmDataBucket }}/{{ .Values.data.osrmVersion }}/osrm-water/ /data'
+            - 'gsutil -q -m rsync -r gs://{{ $.Values.data.osrmDataBucket }}/{{ $.Values.data.osrmVersion }}/osrm-{{ .serviceName | default .name }}/ /data'
           env:
             - name: CLOUDSDK_CORE_DISABLE_PROMPTS
               value: "1"
@@ -49,9 +51,9 @@ spec:
             seccompProfile:
               type: RuntimeDefault
       containers:
-        - name: {{ .Chart.Name }}-water
-          image: {{ .Values.image.identifier }}
-          imagePullPolicy: {{ .Values.image.imagePullPolicy }}
+        - name: {{ $.Chart.Name }}-{{ .name }}
+          image: {{ $.Values.image.identifier }}
+          imagePullPolicy: {{ $.Values.image.imagePullPolicy }}
           command: ['osrm-routed', '/data/norway-latest.osrm']
           env:
             - name: TZ
@@ -61,10 +63,10 @@ spec:
               name: osrm-data
           resources:
             limits:
-              memory: {{ .Values.resources.memLimit }}
+              memory: {{ $.Values.resources.memLimit }}
             requests:
-              cpu: {{ .Values.resources.cpuRequest }}
-              memory: {{ .Values.resources.memRequest }}
+              cpu: {{ $.Values.resources.cpuRequest }}
+              memory: {{ $.Values.resources.memRequest }}
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -74,14 +76,14 @@ spec:
             seccompProfile:
               type: RuntimeDefault
           ports:
-            - containerPort: {{ .Values.service.http.internalPort }}
+            - containerPort: {{ $.Values.service.http.internalPort }}
               name: http
               protocol: TCP
           readinessProbe:
             failureThreshold: 3
             httpGet:
               path: /table/v1/driving/10.8116303,59.9096267;10.7502687,59.911096?sources=0
-              port: {{ .Values.service.http.internalPort }}
+              port: {{ $.Values.service.http.internalPort }}
               scheme: HTTP
             initialDelaySeconds: 60
             periodSeconds: 10
@@ -98,4 +100,4 @@ spec:
         runAsGroup: 1000
       serviceAccountName: application
       terminationGracePeriodSeconds: 31
-
+{{- end}}
