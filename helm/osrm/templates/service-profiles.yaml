@@ -4,18 +4,18 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    {{- include "common.labels" . | indent 4 }}
+    {{- include "common.labels" $ | indent 4 }}
     app: osrm-{{ .name }}
-  name: {{ template "app.name" . }}-{{ .serviceName | default .name }}
+  name: {{ template "app.name" $ }}-{{ .serviceName | default .name }}
   namespace: osrm
 spec:
   ports:
     - name: http
-      port: {{ .Values.service.http.externalPort }}
+      port: {{ $.Values.service.http.externalPort }}
       protocol: TCP
-      targetPort: {{ .Values.service.http.internalPort }}
+      targetPort: {{ $.Values.service.http.internalPort }}
   selector:
-    app: {{ template "app.name" . }}-{{ .name }}
+    app: {{ template "app.name" $ }}-{{ .name }}
   sessionAffinity: None
   type: ClusterIP
 {{- end }}

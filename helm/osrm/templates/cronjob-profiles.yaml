@@ -3,10 +3,10 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ template "app.name" . }}-{{ .name }}-redeploy-cronjob
+  name: {{ template "app.name" $ }}-{{ .name }}-redeploy-cronjob
   namespace: osrm
   labels:
-    {{- include "common.labels" . | indent 4 }}
+    {{- include "common.labels" $ | indent 4 }}
     app: osrm-cronjob
 spec:
   concurrencyPolicy: Allow
@@ -22,7 +22,7 @@ spec:
           initContainers:
             - name: download-osm-data
               image: curlimages/curl:8.12.1
-              command: ['sh', '-c', 'curl -o /data/norway-latest.osm.pbf {{ .Values.data.osmDataUrl }}']
+              command: ['sh', '-c', 'curl -o /data/norway-latest.osm.pbf {{ $.Values.data.osmDataUrl }}']
               volumeMounts:
                 - mountPath: /data
                   name: osm-data
@@ -35,15 +35,15 @@ spec:
                 seccompProfile:
                   type: RuntimeDefault
             - name: osrm-extract
-              image: {{ .Values.image.identifier }}
-              imagePullPolicy: {{ .Values.image.imagePullPolicy }}
+              image: {{ $.Values.image.identifier }}
+              imagePullPolicy: {{ $.Values.image.imagePullPolicy }}
               command: ['osrm-extract', '-p', '/opt/{{ .name }}.lua', '/data/norway-latest.osm.pbf']
               resources:
                 limits:
-                  memory: {{ .Values.init.resources.memLimit }}
+                  memory: {{ $.Values.init.resources.memLimit }}
                 requests:
-                  cpu: {{ .Values.init.resources.cpuRequest }}
-                  memory: {{ .Values.init.resources.memRequest }}
+                  cpu: {{ $.Values.init.resources.cpuRequest }}
+                  memory: {{ $.Values.init.resources.memRequest }}
               volumeMounts:
                 - mountPath: /data
                   name: osm-data
@@ -56,8 +56,8 @@ spec:
                 seccompProfile:
                   type: RuntimeDefault
             - name: osrm-contract
-              image: {{ .Values.image.identifier }}
-              imagePullPolicy: {{ .Values.image.imagePullPolicy }}
+              image: {{ $.Values.image.identifier }}
+              imagePullPolicy: {{ $.Values.image.imagePullPolicy }}
               command: ['osrm-contract', '/data/norway-latest.osrm']
               volumeMounts:
                 - mountPath: /data
@@ -75,7 +75,7 @@ spec:
               command:
                 - sh
                 - -c
-                - 'gsutil -o GSUtil:parallel_composite_upload_threshold=150M -q -m rsync -d -r -x "^(?!.*norway-latest.osrm\.).*" /data gs://{{ .Values.data.osrmDataBucket }}/{{ .Values.data.osrmVersion }}/osrm-{{ .name }}/'
+                - 'gsutil -o GSUtil:parallel_composite_upload_threshold=150M -q -m rsync -d -r -x "^(?!.*norway-latest.osrm\.).*" /data gs://{{ $.Values.data.osrmDataBucket }}/{{ $.Values.data.osrmVersion }}/osrm-{{ .name }}/'
               env:
                 - name: CLOUDSDK_CORE_DISABLE_PROMPTS
                   value: "1"
@@ -100,7 +100,7 @@ spec:
                 - name: DEPLOYMENT
                   value: osrm-{{ .name }}
                 - name: CLOUDSDK_CORE_PROJECT
-                  value: {{ .Values.cronJob.gcpProject }}
+                  value: {{ $.Values.cronJob.gcpProject }}
               image: eu.gcr.io/entur-system-1287/deployment-rollout-restart:0.1.2
               imagePullPolicy: IfNotPresent
               name: redeploy-osrm-{{ .name }}
