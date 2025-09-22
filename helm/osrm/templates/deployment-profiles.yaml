@@ -1,19 +1,19 @@
-{{- range $profile := .Values.profiles }}
+{{- range .Values.profiles }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "app.name" . }}-{{ $profile }}
+  name: {{ template "app.name" . }}-{{ .name }}
   namespace: osrm
   labels:
     {{- include "common.labels" . | indent 4 }}
-    app: osrm-{{ $profile }}
+    app: osrm-{{ .name }}
 spec:
   progressDeadlineSeconds: 5400
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
-      app: {{ template "app.name" . }}-{{ $profile }}
+      app: {{ template "app.name" . }}-{{ .name }}
   strategy:
     rollingUpdate:
       maxSurge: {{ .Values.rollingUpdate.maxSurge }}
@@ -23,7 +23,7 @@ spec:
     metadata:
       labels:
         {{- include "common.labels" . | indent 8 }}
-        app: osrm-{{ $profile }}
+        app: osrm-{{ .name }}
     spec:
       volumes:
         - name: osrm-data
@@ -35,7 +35,7 @@ spec:
           command:
             - sh
             - -c
-            - 'gsutil -q -m rsync -r gs://{{ .Values.data.osrmDataBucket }}/{{ .Values.data.osrmVersion }}/osrm-{{ $profile }}/ /data'
+            - 'gsutil -q -m rsync -r gs://{{ .Values.data.osrmDataBucket }}/{{ .Values.data.osrmVersion }}/osrm-{{ .name }}/ /data'
           env:
             - name: CLOUDSDK_CORE_DISABLE_PROMPTS
               value: "1"
@@ -51,7 +51,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
       containers:
-        - name: {{ .Chart.Name }}-{{ $profile }}
+        - name: {{ .Chart.Name }}-{{ .name }}
           image: {{ .Values.image.identifier }}
           imagePullPolicy: {{ .Values.image.imagePullPolicy }}
           command: ['osrm-routed', '/data/norway-latest.osrm']

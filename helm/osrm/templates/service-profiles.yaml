@@ -1,12 +1,12 @@
-{{- range $profile := .Values.profiles }}
+{{- range .Values.profiles }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
   labels:
     {{- include "common.labels" . | indent 4 }}
-    app: osrm-{{ $profile }}
-  name: {{ template "app.name" . }}-{{ $profile }}
+    app: osrm-{{ .name }}
+  name: {{ template "app.name" . }}-{{ .serviceName | default .name }}
   namespace: osrm
 spec:
   ports:
@@ -15,7 +15,7 @@ spec:
       protocol: TCP
       targetPort: {{ .Values.service.http.internalPort }}
   selector:
-    app: {{ template "app.name" . }}-{{ $profile }}
+    app: {{ template "app.name" . }}-{{ .name }}
   sessionAffinity: None
   type: ClusterIP
 {{- end }}

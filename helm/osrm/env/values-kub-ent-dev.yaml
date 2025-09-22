@@ -7,7 +7,8 @@ data:
   osrmDataBucket: ror-osrm-internal-dev
 
 profiles:
-  - bus
-  - rail
-  - water
-  - car
+  - name: bus
+  - name: rail
+  - name: ferry
+    serviceName: water
+  - name: car

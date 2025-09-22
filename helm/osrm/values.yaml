@@ -32,6 +32,7 @@ data:
   osrmVersion: v6
 
 profiles:
-  - bus
-  - rail
-  - water
+  - name: bus
+  - name: rail
+  - name: ferry
+    serviceName: water
