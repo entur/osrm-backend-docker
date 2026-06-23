@@ -33,7 +33,7 @@ jobs:
       run: mkdir -p test/expected test/results test-data
 
     - name: Cache OSM data file
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: |
           test-data/zeeland-latest.osm.pbf
