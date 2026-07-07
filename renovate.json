@@ -1,15 +1,6 @@
 {
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base"
-  ],
-  "baseBranch": "rutebanken",
-  "packageRules": [
-    {
-      "matchPackageNames": [
-        "google/cloud-sdk"
-      ],
-      "automerge": true,
-      "separateMinorPatch": false
-    }
+    "github>entur/ror-renovate-config"
   ]
 }
