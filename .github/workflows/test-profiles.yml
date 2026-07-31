@@ -24,16 +24,16 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@v7.0.1
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v4
+      uses: docker/setup-buildx-action@v4.2.0
 
     - name: Create test directories
       run: mkdir -p test/expected test/results test-data
 
     - name: Cache OSM data file
-      uses: actions/cache@v6
+      uses: actions/cache@v6.1.0
       with:
         path: |
           test-data/zeeland-latest.osm.pbf
@@ -146,7 +146,7 @@ jobs:
 
     - name: Upload test results
       if: always()
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@v7.0.1
       with:
         name: test-results
         path: test/results/
@@ -154,7 +154,7 @@ jobs:
 
     - name: Upload baseline responses
       if: success()
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@v7.0.1
       with:
         name: test-baselines
         path: test/expected/
