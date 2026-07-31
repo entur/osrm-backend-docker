@@ -45,6 +45,53 @@ step 4 in the CronJob pipeline as described above.
 The main container then simply runs `osrm-routed`  (with our custom docker image) 
 with the downloaded data as input.
 
+### Upgrading the OSRM version
+
+**An OSRM version bump is always two coupled actions: a new image _and_ a graph rebuild.**
+OSRM's pre-processed graph files (`*.osrm.*`) are version-locked. A newer `osrm-routed`
+refuses to load data prepared by an older `osrm-extract`/`osrm-contract` (and vice versa),
+failing with:
+
+```
+File is incompatible with this version of OSRM:
+/data/norway-latest.osrm.ebg_nodes prepared with OSRM <old> but this is <new>
+```
+
+So bumping the base image in the `Dockerfile` alone will **wedge the rollout**: the new
+`osrm-routed` pods CrashLoopBackOff on the still-old graph data, the deployment can't retire
+the old (healthy) pods, and it never converges.
+
+Note that `data.osrmVersion` in the Helm values is **not** the OSRM software version — it is
+only the GCS path prefix (`gs://<bucket>/<osrmVersion>/osrm-<profile>/`) used by both the
+CronJob upload and the deployment download. Bumping it alone does **not** rebuild data; it
+just points both sides at a (possibly empty) new path.
+
+Recommended procedure, per environment (dev → tst → prd):
+
+1. Merge the base-image bump (and any profile fixes it requires — a new engine can add
+   Lua profile properties; run `./run-test.sh` to catch extract crashes before deploying).
+   CD builds the new custom image.
+2. **For a safe, rollback-able cutover:** bump `data.osrmVersion` to a fresh prefix
+   (e.g. `v6` → `v26`) so the old graph data survives at the old prefix. The new prefix is
+   empty until step 3, so do not deploy the new image before building. (Overwriting the
+   existing prefix in place also works but is forward-only — you lose the rollback path,
+   because the old engine can't read the newly-built data either.)
+3. Rebuild the graph with the new engine by triggering each profile's (suspended) build
+   CronJob, which runs extract → contract → upload → redeploy:
+
+   ```bash
+   kubectl -n osrm create job osrm-bus-rebuild   --from=cronjob/osrm-bus-redeploy-cronjob
+   kubectl -n osrm create job osrm-rail-rebuild  --from=cronjob/osrm-rail-redeploy-cronjob
+   kubectl -n osrm create job osrm-ferry-rebuild --from=cronjob/osrm-ferry-redeploy-cronjob
+   # ...repeat for any other profiles (car, water)
+   ```
+
+4. Each job's final step restarts its deployment, which then pulls the freshly-built graph.
+   Verify: `kubectl -n osrm rollout status deploy/osrm-bus` and that no pods remain in
+   CrashLoopBackOff.
+5. Rollback (only if you used a fresh prefix in step 2): revert both the image and
+   `data.osrmVersion`, then redeploy.
+
 ## Running locally
 
 You can modify profile code locally and test it as follows:
