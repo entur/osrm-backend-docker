@@ -86,6 +86,11 @@ Recommended procedure, rolled out one environment at a time (dev → tst → prd
    # ...repeat for any other profiles (car, water)
    ```
 
+   Trigger this **promptly**: the deploy tooling auto-rolls-back a rollout that never goes
+   healthy, reverting to the previous (old-engine) image. If that happens before the graph
+   is rebuilt, you land on old-engine + new-data (the same incompatibility, mirrored) — just
+   re-deploy the new image once the rebuild has populated the prefix.
+
 4. Each job's final step restarts its deployment, which then pulls the freshly-built graph
    and converges. Verify: `kubectl -n osrm rollout status deploy/osrm-bus` and that no pods
    remain in CrashLoopBackOff.
