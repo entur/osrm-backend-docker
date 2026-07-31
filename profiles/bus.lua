@@ -35,6 +35,8 @@ function setup()
     default_speed             = 10,
     oneway_handling           = true,
     side_road_multiplier      = 0.8,
+    -- required by lib/way_handlers.penalties since upstream #7409 (lane_markings=no); matches car.lua default
+    lane_markings_penalty     = 0.75,
     turn_penalty              = 7.5,
     speed_reduction           = 0.8,
     turn_bias                 = 1.075,
