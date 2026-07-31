@@ -1,4 +1,4 @@
-FROM ghcr.io/project-osrm/osrm-backend:v6.0.0
+FROM ghcr.io/project-osrm/osrm-backend:v26.4.0
 
 RUN apk update \
     && apk upgrade \
