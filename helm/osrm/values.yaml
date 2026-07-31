@@ -29,7 +29,10 @@ secrets:
     - SLACK_URL
 
 data:
-  osrmVersion: v6
+  # GCS graph-format prefix (NOT the OSRM software version). Bump this on a major
+  # osrm-backend upgrade, paired with a graph rebuild into the new prefix. See the
+  # "Upgrading the OSRM version" runbook in README.md.
+  osrmVersion: v26
 
 profiles:
   - name: bus
