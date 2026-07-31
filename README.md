@@ -66,18 +66,18 @@ only the GCS path prefix (`gs://<bucket>/<osrmVersion>/osrm-<profile>/`) used by
 CronJob upload and the deployment download. Bumping it alone does **not** rebuild data; it
 just points both sides at a (possibly empty) new path.
 
-Recommended procedure, per environment (dev → tst → prd):
+Recommended procedure, rolled out one environment at a time (dev → tst → prd):
 
-1. Merge the base-image bump (and any profile fixes it requires — a new engine can add
-   Lua profile properties; run `./run-test.sh` to catch extract crashes before deploying).
-   CD builds the new custom image.
-2. **For a safe, rollback-able cutover:** bump `data.osrmVersion` to a fresh prefix
-   (e.g. `v6` → `v26`) so the old graph data survives at the old prefix. The new prefix is
-   empty until step 3, so do not deploy the new image before building. (Overwriting the
-   existing prefix in place also works but is forward-only — you lose the rollback path,
-   because the old engine can't read the newly-built data either.)
-3. Rebuild the graph with the new engine by triggering each profile's (suspended) build
-   CronJob, which runs extract → contract → upload → redeploy:
+1. Merge the base-image bump together with a bump of `data.osrmVersion` to a fresh prefix
+   (e.g. `v6` → `v26`). Using a *new* prefix keeps the old graph data intact at the old
+   prefix, which is what makes rollback possible. Include any profile fixes the new engine
+   needs — a new engine can add Lua profile properties; run `./run-test.sh` first to catch
+   extract crashes. CD builds the new image and deploys the new engine + prefix.
+2. On deploy the new `osrm-routed` pods CrashLoopBackOff, because the new prefix is still
+   empty. **This is expected and causes no outage:** the rollout never converges, so the old
+   ReplicaSet keeps serving. The old pods are unaffected — they still read the old prefix.
+3. **While the rollout is retrying**, trigger each profile's (suspended) build CronJob to
+   populate the new prefix. Each runs extract → contract → upload → redeploy:
 
    ```bash
    kubectl -n osrm create job osrm-bus-rebuild   --from=cronjob/osrm-bus-redeploy-cronjob
@@ -86,11 +86,11 @@ Recommended procedure, per environment (dev → tst → prd):
    # ...repeat for any other profiles (car, water)
    ```
 
-4. Each job's final step restarts its deployment, which then pulls the freshly-built graph.
-   Verify: `kubectl -n osrm rollout status deploy/osrm-bus` and that no pods remain in
-   CrashLoopBackOff.
-5. Rollback (only if you used a fresh prefix in step 2): revert both the image and
-   `data.osrmVersion`, then redeploy.
+4. Each job's final step restarts its deployment, which then pulls the freshly-built graph
+   and converges. Verify: `kubectl -n osrm rollout status deploy/osrm-bus` and that no pods
+   remain in CrashLoopBackOff.
+5. Rollback: revert the image and `data.osrmVersion` to the previous prefix and redeploy —
+   the old graph data is still there.
 
 ## Running locally
 
