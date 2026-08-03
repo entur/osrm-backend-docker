@@ -97,6 +97,46 @@ Recommended procedure, rolled out one environment at a time (dev → tst → prd
 5. Rollback: revert the image and `data.osrmVersion` to the previous prefix and redeploy —
    the old graph data is still there.
 
+#### Environments still on the pre-rename ("water") chart
+
+The deploy-then-rebuild flow above is only safe when the environment is already on the
+current chart, where the `osrm-water` Service selects `app: osrm-ferry` and the ferry
+Deployment exists (dev). An environment still on the **pre-rename chart** (at time of
+writing, **tst and prd**) has `osrm-water` as a *Deployment* (`app: osrm-water`) and the
+`osrm-water` Service selects `app: osrm-water` — there is no `osrm-ferry`. Deploying the
+current chart there does the **water→ferry rename and the v26 bump in one step**, which
+changes the risk:
+
+- **bus / rail** — name unchanged, so old pods keep serving while new ones crashloop on the
+  empty prefix. No outage (same as above).
+- **ferry / water** — the deploy repoints the `osrm-water` Service from `app: osrm-water` to
+  `app: osrm-ferry`. The old pods stop receiving traffic immediately and the new ferry pods
+  aren't ready yet, so **`osrm-water.<env>.entur.internal` goes down** until ferry is healthy.
+  With crashloop-then-rebuild that outage lasts the whole ~30-min rebuild.
+
+So for these environments use **build-then-flip** instead — pre-populate the new prefix
+*before* deploying, so the new pods (including ferry) come up healthy immediately:
+
+1. Pre-build the graph into the new prefix without touching the live deployments, using the
+   **exact image you are about to deploy**:
+
+   ```bash
+   ./prebuild-osrm-graph.sh tst v26 <osrm-api-image-tag>
+   ```
+
+   This runs download → extract → contract → upload for bus, rail and water into
+   `gs://ror-osrm-internal-<env>/v26/…`, with no redeploy — the running v6 pods are
+   unaffected. Wait for all three Jobs to complete and verify the data landed.
+2. Deploy the current chart (v26 image + `osrmVersion=v26` + the rename). Every new pod finds
+   its data already present, so bus/rail converge with no outage and ferry/water has only a
+   brief (~1–2 min) readiness gap when the Service flips, not a 30-min one.
+3. Verify routing on all hosts, then **delete the now-orphaned `osrm-water` Deployment**.
+
+**Before deleting `osrm-water` in any environment, check the Service selector:**
+`kubectl -n osrm get svc osrm-water -o jsonpath='{.spec.selector}'`.
+`app: osrm-ferry` ⇒ the Deployment is an un-pruned orphan, safe to delete. `app: osrm-water`
+⇒ it is still the **live backend** (pre-rename chart) — deleting it takes ferry/water down.
+
 ## Running locally
 
 You can modify profile code locally and test it as follows:
