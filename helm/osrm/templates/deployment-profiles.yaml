@@ -8,6 +8,8 @@ metadata:
   labels:
     {{- include "common.labels" $ | indent 4 }}
     app: osrm-{{ .name }}
+  annotations:
+    {{- include "common.annotations" $ | indent 4 }}
 spec:
   progressDeadlineSeconds: 5400
   replicas: {{ $.Values.replicas }}

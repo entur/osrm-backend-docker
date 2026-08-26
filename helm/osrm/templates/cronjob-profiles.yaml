@@ -8,6 +8,8 @@ metadata:
   labels:
     {{- include "common.labels" $ | indent 4 }}
     app: osrm-cronjob
+  annotations:
+    {{- include "common.annotations" $ | indent 4 }}
 spec:
   concurrencyPolicy: Allow
   failedJobsHistoryLimit: 1
