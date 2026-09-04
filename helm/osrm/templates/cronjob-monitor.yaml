@@ -49,21 +49,29 @@ spec:
                     echo "No stored MD5 found - first run, triggering redeploy"
                   fi
 
-                  # Store the new MD5
+                  # Profile names, not service names: ferry serves under serviceName "water".
+                  PROFILES="{{ range .Values.profiles }}{{ .name }} {{ end }}"
+                  [ -n "${PROFILES% }" ] || { echo "No profiles configured"; exit 1; }
+                  echo "Profiles: $PROFILES"
+
+                  # Name keyed on the hash transition, lowercased for DNS-1123: a retried pod
+                  # re-creates only what is missing, while a rollback (A->B->A) still rebuilds
+                  # rather than matching the job left over from the first A.
+                  echo "Triggering redeploy cronjobs..."
+                  FROM=$(echo "${STORED_MD5:-none}" | cut -c1-10 | tr 'A-Z' 'a-z')
+                  TO=$(echo "$CURRENT_MD5" | cut -c1-10 | tr 'A-Z' 'a-z')
+                  for PROFILE in $PROFILES; do
+                    echo "Creating job for osrm-$PROFILE..."
+                    OUT=$(kubectl create job --from=cronjob/osrm-$PROFILE-redeploy-cronjob "osrm-$PROFILE-$FROM-$TO" -n osrm 2>&1) \
+                      || case "$OUT" in *AlreadyExists*) ;; *) echo "$OUT" >&2; exit 1 ;; esac
+                    echo "$OUT"
+                  done
+
+                  # Last: the stored MD5 marks this OSM version handled. Writing it before the
+                  # jobs exist would permanently skip any profile whose trigger failed.
                   echo "$CURRENT_MD5" > /tmp/new.md5
                   gsutil -q cp /tmp/new.md5 "gs://{{ .Values.data.osrmDataBucket }}/osm-latest.md5"
                   echo "Stored new MD5 in bucket"
-
-                  # Trigger the redeploy cronjobs
-                  echo "Triggering redeploy cronjobs..."
-
-                  # Create jobs from suspended cronjobs
-                  for SERVICE in bus rail water car; do
-                    echo "Creating job for osrm-$SERVICE..."
-                    kubectl create job --from=cronjob/osrm-$SERVICE-redeploy-cronjob osrm-$SERVICE-manual-$(date +%s) -n osrm || {
-                      echo "Failed to create job for osrm-$SERVICE"
-                    }
-                  done
 
                   echo "All redeploy jobs triggered successfully"
               env:
