@@ -21,9 +21,10 @@ in both the CronJobs (for building the osrm data) and for the main deployments.
 This project uses Kubernetes CronJobs with init containers to build the OSRM data / graph. The
 job ends with a redeployment of the main services.
 
-There is one CronJob per entry in `profiles` (`helm/osrm/values.yaml`, replaced wholesale per
-environment in `helm/osrm/env/values-kub-ent-*.yaml`). They are named after the **profile**, not
-the service. prd and tst have:
+There is one CronJob per entry in `profiles` (`helm/osrm/values.yaml`). An environment file
+(`helm/osrm/env/values-kub-ent-*.yaml`) may replace that list wholesale, but only dev does; prd
+and tst inherit the default. They are named after the **profile**, not the service. prd and tst
+have:
 
 - bus
 - rail

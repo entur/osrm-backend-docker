@@ -54,13 +54,15 @@ spec:
                   [ -n "${PROFILES% }" ] || { echo "No profiles configured"; exit 1; }
                   echo "Profiles: $PROFILES"
 
-                  # Job name keyed on the OSM hash, so a retried pod re-creates only what is
-                  # missing rather than starting a second rebuild over the same GCS prefix.
+                  # Name keyed on the hash transition, lowercased for DNS-1123: a retried pod
+                  # re-creates only what is missing, while a rollback (A->B->A) still rebuilds
+                  # rather than matching the job left over from the first A.
                   echo "Triggering redeploy cronjobs..."
-                  SUFFIX=$(echo "$CURRENT_MD5" | cut -c1-10)
+                  FROM=$(echo "${STORED_MD5:-none}" | cut -c1-10 | tr 'A-Z' 'a-z')
+                  TO=$(echo "$CURRENT_MD5" | cut -c1-10 | tr 'A-Z' 'a-z')
                   for PROFILE in $PROFILES; do
                     echo "Creating job for osrm-$PROFILE..."
-                    OUT=$(kubectl create job --from=cronjob/osrm-$PROFILE-redeploy-cronjob "osrm-$PROFILE-$SUFFIX" -n osrm 2>&1) \
+                    OUT=$(kubectl create job --from=cronjob/osrm-$PROFILE-redeploy-cronjob "osrm-$PROFILE-$FROM-$TO" -n osrm 2>&1) \
                       || case "$OUT" in *AlreadyExists*) ;; *) echo "$OUT" >&2; exit 1 ;; esac
                     echo "$OUT"
                   done
