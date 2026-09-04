@@ -21,11 +21,18 @@ in both the CronJobs (for building the osrm data) and for the main deployments.
 This project uses Kubernetes CronJobs with init containers to build the OSRM data / graph. The
 job ends with a redeployment of the main services.
 
-There are three CronJobs, each corresponding to a main deployment servicing a specific profile: 
+There is one CronJob per entry in `profiles` (`helm/osrm/values.yaml`, replaced wholesale per
+environment in `helm/osrm/env/values-kub-ent-*.yaml`). They are named after the **profile**, not
+the service. prd and tst have:
 
 - bus
 - rail
-- water (ferry)
+- ferry (serves under the `osrm-water` Service, so the cronjob is `osrm-ferry-redeploy-cronjob`)
+
+dev additionally has `car`.
+
+The CronJobs are suspended; `osrm-monitor-osm-data` triggers them when the source OSM data
+changes, deriving the list from the same `profiles` values so the two cannot drift apart.
 
 Each CronJob runs the following init containers in sequence:
 
@@ -83,7 +90,7 @@ Recommended procedure, rolled out one environment at a time (dev → tst → prd
    kubectl -n osrm create job osrm-bus-rebuild   --from=cronjob/osrm-bus-redeploy-cronjob
    kubectl -n osrm create job osrm-rail-rebuild  --from=cronjob/osrm-rail-redeploy-cronjob
    kubectl -n osrm create job osrm-ferry-rebuild --from=cronjob/osrm-ferry-redeploy-cronjob
-   # ...repeat for any other profiles (car, water)
+   # ...repeat for any other profiles (dev also has car)
    ```
 
    Trigger this **promptly**: the deploy tooling auto-rolls-back a rollout that never goes
@@ -99,10 +106,12 @@ Recommended procedure, rolled out one environment at a time (dev → tst → prd
 
 #### Environments still on the pre-rename ("water") chart
 
+Historical: dev, tst and prd are all on the post-rename chart as of 2026-08-03. Keep this
+section for reference if an environment is ever rolled back past that point.
+
 The deploy-then-rebuild flow above is only safe when the environment is already on the
 current chart, where the `osrm-water` Service selects `app: osrm-ferry` and the ferry
-Deployment exists (dev). An environment still on the **pre-rename chart** (at time of
-writing, **tst and prd**) has `osrm-water` as a *Deployment* (`app: osrm-water`) and the
+Deployment exists. An environment still on the **pre-rename chart** has `osrm-water` as a *Deployment* (`app: osrm-water`) and the
 `osrm-water` Service selects `app: osrm-water` — there is no `osrm-ferry`. Deploying the
 current chart there does the **water→ferry rename and the v26 bump in one step**, which
 changes the risk:
@@ -130,12 +139,21 @@ So for these environments use **build-then-flip** instead — pre-populate the n
 2. Deploy the current chart (v26 image + `osrmVersion=v26` + the rename). Every new pod finds
    its data already present, so bus/rail converge with no outage and ferry/water has only a
    brief (~1–2 min) readiness gap when the Service flips, not a 30-min one.
-3. Verify routing on all hosts, then **delete the now-orphaned `osrm-water` Deployment**.
+3. Verify routing on all hosts, then **delete the now-orphaned `osrm-water` Deployment *and*
+   `osrm-water-redeploy-cronjob`**. Neither is pruned by the rename: the deploy applies the
+   rendered manifests without deleting resources that dropped out of the chart.
 
 **Before deleting `osrm-water` in any environment, check the Service selector:**
 `kubectl -n osrm get svc osrm-water -o jsonpath='{.spec.selector}'`.
 `app: osrm-ferry` ⇒ the Deployment is an un-pruned orphan, safe to delete. `app: osrm-water`
 ⇒ it is still the **live backend** (pre-rename chart) — deleting it takes ferry/water down.
+
+Do not skip the CronJob. Until the monitor was fixed to derive its list from `profiles`, it
+triggered the leftover `osrm-water-redeploy-cronjob` rather than the ferry one, rebuilding
+into the **old** prefix: `gsutil ls` on `v6/osrm-water/` showed fresh timestamps while the
+prefix the live pods actually read went stale. That is how prd served a graph from
+2026-08-03 for a month while the pipeline looked healthy. The rebuild CronJobs are
+`suspend: true`, so an orphan is inert once nothing triggers it, but delete it anyway.
 
 ## Running locally
 
