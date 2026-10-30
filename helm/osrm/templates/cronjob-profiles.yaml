@@ -14,8 +14,16 @@ spec:
   concurrencyPolicy: Allow
   failedJobsHistoryLimit: 1
   jobTemplate:
+    metadata:
+      labels:
+        {{- include "common.labels" $ | indent 8 }}
+        app: osrm-cronjob
     spec:
       template:
+        metadata:
+          labels:
+            {{- include "common.labels" $ | indent 12 }}
+            app: osrm-cronjob
         spec:
           volumes:
             - name: osm-data

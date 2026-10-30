@@ -12,8 +12,16 @@ spec:
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 1
   jobTemplate:
+    metadata:
+      labels:
+        {{- include "common.labels" . | indent 8 }}
+        app: osrm-monitor
     spec:
       template:
+        metadata:
+          labels:
+            {{- include "common.labels" . | indent 12 }}
+            app: osrm-monitor
         spec:
           containers:
             - name: check-osm-updates
